@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Title Shuffler",
+  "version": "1.0",
+  "description": "Randomly shuffles video titles (and replaces missing titles with quotes) on YouTube.",
+  "permissions": ["activeTab"],
+  "icons": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+  },
+  "action": {
+      "default_icon": {
+          "16": "icon16.png",
+          "48": "icon48.png",
+          "128": "icon128.png"
+      },
+      "default_title": "Shuffle YouTube Titles"
+  },
+  "content_scripts": [
+      {
+          "matches": ["*://www.youtube.com/*"],
+          "js": ["content.js"]
+      }
+  ]
+}
