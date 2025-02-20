@@ -39,13 +39,13 @@ const randomQuotes = [
     "Don't go chasing waterfalls",
     "You look pretty!",
     "I made like a tree and left",
-    "Nothin is impossible unless you can't do it",
+    "Nothing is impossible unless you can't do it",
     "I figured something out. Life is unpredictable.",
     "The following statement is true. The previous statement is false.",
     "Have you ever wondered why you can't taste your tongue?"
 ];
 
-// Shuffle the video titles
+// Function to shuffle the video titles
 function shuffleYouTubeTitles() {
     console.log("Running YouTube Title Shuffler...");
 
@@ -66,22 +66,42 @@ function shuffleYouTubeTitles() {
         return randomQuotes[Math.floor(Math.random() * randomQuotes.length)];
     });
 
-    // Shuffle only the valid titles (excluding the quotes)
+    // Shuffle the titles
     shuffleArray(titles);
 
-    // Apply shuffled titles back to the dom
+    // Apply shuffled titles back to the DOM
     videoElements.forEach((video, index) => {
         let titleElem = video.querySelector('#video-title');
-        if (titleElem) titleElem.textContent = titles[index]; // Assign shuffled title or quote
+        if (titleElem) titleElem.textContent = titles[index];
     });
 
     console.log("Title shuffling complete.");
 }
 
-// Delay when content is loaded and then shuffle once
-setTimeout(() => {
-    if (!document.body.getAttribute('data-title-shuffled')) {
-        shuffleYouTubeTitles();
-        document.body.setAttribute('data-title-shuffled', 'true'); // Don't reshuffle!
+// Observe dynamic content changes
+function observeYouTubeChanges() {
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === 1 && (node.matches('ytd-rich-item-renderer') || node.matches('ytd-video-renderer'))) {
+                    shuffleYouTubeTitles(); // Re-shuffle when new videos are added
+                }
+            });
+        });
+    });
+
+    // Observe changes in the video list
+    const targetNode = document.querySelector('ytd-rich-grid-renderer, ytd-section-list-renderer');
+    if (targetNode) {
+        observer.observe(targetNode, { childList: true, subtree: true });
+        console.log("Observer initialized to watch for new videos.");
+    } else {
+        console.log("Could not find target container to observe.");
     }
+}
+
+// Shuffle after a short delay
+setTimeout(() => {
+    shuffleYouTubeTitles();
+    observeYouTubeChanges(); // Observe for dynamically-loaded content
 }, 3000);
