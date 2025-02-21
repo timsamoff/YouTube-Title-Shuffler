@@ -45,87 +45,113 @@ const randomQuotes = [
     "Have you ever wondered why you can't taste your tongue?"
 ];
 
-// Shuffle YouTube titles
+// Shuffle all video and Shorts titles
 function shuffleYouTubeTitles() {
-    console.log("🔄 Shuffling YouTube titles...");
+    console.log("Running YouTube Title Shuffler...");
 
-    // Select video elements (Main page & Sidebar)
-    let videoElements = Array.from(document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer'));
+    // Collect all main page videos & Shorts
+    let videoElements = Array.from(document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer'));
 
-    // Extract titles
+    // Collect sidebar video titles
+    let sidebarVideos = Array.from(document.querySelectorAll('ytd-compact-video-renderer'));
+
+    // Extract main page video and Shorts titles
     let titles = videoElements.map(video => {
-        let titleElem = video.querySelector('#video-title') || video.querySelector('span.yt-core-attributed-string');
-        let title = titleElem ? titleElem.textContent.trim() : "";
-        return title.length > 0 ? title : randomQuotes[Math.floor(Math.random() * randomQuotes.length)];
+        // Regular video titles
+        let titleElem = video.querySelector('#video-title');
+        if (titleElem) {
+            let title = titleElem.textContent.trim();
+            return title.length > 0 ? title : randomQuotes[Math.floor(Math.random() * randomQuotes.length)];
+        }
+
+        // Shorts titles (main page)
+        let shortsTitleElem = video.querySelector('span.yt-core-attributed-string');
+        if (shortsTitleElem) {
+            let title = shortsTitleElem.textContent.trim();
+            return title.length > 0 ? title : randomQuotes[Math.floor(Math.random() * randomQuotes.length)];
+        }
+
+        // Fallback in case no title is found
+        return randomQuotes[Math.floor(Math.random() * randomQuotes.length)];
     });
 
-    // Shuffle titles
-    shuffleArray(titles);
-
-    // Apply shuffled titles back
-    videoElements.forEach((video, index) => {
-        let titleElem = video.querySelector('#video-title') || video.querySelector('span.yt-core-attributed-string');
+    // Extract sidebar video and Shorts titles
+    let sidebarTitles = sidebarVideos.map(video => {
+        // Sidebar video titles
+        let titleElem = video.querySelector('#video-title');
         if (titleElem) {
-            titleElem.textContent = titles[index];
+            let title = titleElem.textContent.trim();
+            return title.length > 0 ? title : randomQuotes[Math.floor(Math.random() * randomQuotes.length)];
+        }
+
+        // Sidebar Shorts titles
+        let shortsTitleElem = video.querySelector('span.yt-core-attributed-string');
+        if (shortsTitleElem) {
+            let title = shortsTitleElem.textContent.trim();
+            return title.length > 0 ? title : randomQuotes[Math.floor(Math.random() * randomQuotes.length)];
+        }
+
+        // Fallback
+        return randomQuotes[Math.floor(Math.random() * randomQuotes.length)];
+    });
+
+    // Combine all titles into one list to shuffle
+    let allTitles = titles.concat(sidebarTitles);
+    shuffleArray(allTitles);
+
+    // Apply shuffled titles back to the main page videos & Shorts
+    videoElements.forEach((video, index) => {
+        let titleElem = video.querySelector('#video-title');
+        if (titleElem) {
+            titleElem.textContent = allTitles[index];
+        }
+
+        let shortsTitleElem = video.querySelector('span.yt-core-attributed-string');
+        if (shortsTitleElem) {
+            shortsTitleElem.textContent = allTitles[index];
         }
     });
 
-    console.log("✅ Title shuffling complete.");
+    // Apply shuffled titles back to sidebar videos & Shorts
+    sidebarVideos.forEach((video, index) => {
+        let titleElem = video.querySelector('#video-title');
+        if (titleElem) {
+            titleElem.textContent = allTitles[index + videoElements.length]; // Offset index for sidebar
+        }
+
+        let shortsTitleElem = video.querySelector('span.yt-core-attributed-string');
+        if (shortsTitleElem) {
+            shortsTitleElem.textContent = allTitles[index + videoElements.length]; // Offset index for sidebar
+        }
+    });
+
+    console.log("Title shuffling complete.");
 }
 
-// Observe sidebar changes
-function observeSidebar() {
-    const sidebar = document.querySelector('ytd-watch-next-secondary-results-renderer');
-    if (!sidebar) {
-        console.log("⚠️ Sidebar not found. Retrying...");
-        setTimeout(observeSidebar, 2000); // Retry in 2 seconds
-        return;
-    }
-
+// Observe dynamic content changes
+function observeYouTubeChanges() {
     const observer = new MutationObserver(mutations => {
         mutations.forEach(mutation => {
-            if (mutation.addedNodes.length > 0) {
-                console.log("📌 New sidebar content detected. Shuffling...");
-                setTimeout(shuffleYouTubeTitles, 1500); // Allow content to fully load
-            }
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === 1 && (node.matches('ytd-rich-item-renderer') || node.matches('ytd-video-renderer') || node.matches('ytd-compact-video-renderer'))) {
+                    shuffleYouTubeTitles(); // Re-shuffle when new videos are added
+                }
+            });
         });
     });
 
-    observer.observe(sidebar, { childList: true, subtree: true });
-    console.log("👀 Sidebar observer activated.");
+    // Observe changes in the video list
+    const targetNode = document.querySelector('ytd-rich-grid-renderer, ytd-section-list-renderer, ytd-watch-next-secondary-results-renderer');
+    if (targetNode) {
+        observer.observe(targetNode, { childList: true, subtree: true });
+        console.log("Observer initialized to watch for new videos and Shorts in sidebar.");
+    } else {
+        console.log("Could not find target container to observe.");
+    }
 }
 
-// Detect internal page navigation
-function detectPageChange() {
-    let lastUrl = location.href;
-
-    setInterval(() => {
-        if (location.href !== lastUrl) {
-            console.log("🔄 URL changed! Updating sidebar...");
-            lastUrl = location.href;
-            setTimeout(() => {
-                shuffleYouTubeTitles();
-                observeSidebar();
-            }, 2000); // Delay for loading
-        }
-    }, 500);
-}
-
-// Listen for internal navigation events
-function addYouTubeEventListener() {
-    document.addEventListener("yt-navigate-finish", () => {
-        console.log("🎯 YouTube navigation detected!");
-        setTimeout(() => {
-            shuffleYouTubeTitles();
-            observeSidebar();
-        }, 2000); // Allow content to load
-    });
-}
-
-// Run after page load
+// Shuffle after a short delay
 setTimeout(() => {
     shuffleYouTubeTitles();
-    observeSidebar();
-    detectPageChange();
-    addYouTubeEventListener();
+    observeYouTubeChanges(); // Observe for dynamically-loaded content
 }, 3000);
